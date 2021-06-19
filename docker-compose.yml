@@ -1,0 +1,139 @@
+version: '3.1'
+
+networks:
+  network-zabbix:
+    driver: bridge
+
+services:
+  mysql:
+    container_name: mysql
+    image: mariadb:10.5.10
+    networks:
+      - network-zabbix
+    ports:
+      - '3306:3306'
+    volumes:
+      - './zabbix/mysql:/var/lib/mysql'
+    environment:
+      - MYSQL_ALLOW_EMPTY_PASSWORD=yes
+      #- MYSQL_ROOT_PASSWORD=pass
+      #- MYSQL_DATABASE=zabbix
+      #- MYSQL_USER=zabbix
+      #- MYSQL_PASSWORD=zabbix
+
+  zabbix-server:
+    container_name: zabbix-server
+    image: zabbix/zabbix-server-mysql:alpine-5.4-latest
+    networks:
+      - network-zabbix
+    links:
+      - mysql
+    restart: always
+    ports:
+      - '10051:10051'
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro 
+      - ./zbx_env/usr/lib/zabbix/alertscripts:/usr/lib/zabbix/alertscripts:ro
+      - ./zbx_env/usr/lib/zabbix/externalscripts:/usr/lib/zabbix/externalscripts:ro
+      - ./zbx_env/var/lib/zabbix/export:/var/lib/zabbix/export:rw
+      - ./zbx_env/var/lib/zabbix/modules:/var/lib/zabbix/modules:ro
+      - ./zbx_env/var/lib/zabbix/enc:/var/lib/zabbix/enc:ro
+      - ./zbx_env/var/lib/zabbix/ssh_keys:/var/lib/zabbix/ssh_keys:ro
+      - ./zbx_env/var/lib/zabbix/mibs:/var/lib/zabbix/mibs:ro
+      - ./snmptraps:/var/lib/zabbix/snmptraps:rw
+
+    environment:
+      - DB_SERVER_HOST=mysql
+      - DB_SERVER_PORT=3306
+      - MYSQL_DATABASE=zabbix
+      - MYSQL_USER=zabbix
+      - MYSQL_PASSWORD=zabbix
+      #- ZBX_DEBUGLEVEL=3
+      #- ZBX_TIMEOUT=4
+    depends_on:
+      - mysql
+
+  zabbix-frontend:
+    container_name: zabbix-frontend
+    image: zabbix/zabbix-web-apache-mysql:alpine-5.4-latest
+    networks:
+      - network-zabbix
+    links:
+      - mysql
+    restart: always
+    ports:
+      - '8080:8080'
+      - '443:8443'
+    environment:
+      - DB_SERVER_HOST=mysql
+      - DB_SERVER_PORT=3306
+      - ZBX_SERVER_HOST=zabbix-server
+      - ZBX_SERVER_PORT=10051
+      - MYSQL_DATABASE=zabbix
+      - MYSQL_USER=zabbix
+      - MYSQL_PASSWORD=zabbix
+      - PHP_TZ=America/Sao_Paulo
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+      - ./zbx_env/etc/ssl/nginx:/etc/ssl/nginx:ro
+      - ./zbx_env/usr/share/zabbix/modules/:/usr/share/zabbix/modules/:ro
+    depends_on:
+      - mysql
+   
+  zabbix-agent:
+    container_name: zabbix-agent
+    image: zabbix/zabbix-agent2:alpine-5.4-latest
+    user: root
+    networks:
+      - network-zabbix
+    links:
+      - zabbix-server
+    restart: always
+    privileged: true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    ports:
+      - '10050:10050'
+    environment:
+      - ZBX_HOSTNAME=Zabbix server
+      - ZBX_SERVER_HOST=zabbix-server
+      #- ZBX_DEBUGLEVEL=5
+      #- ZBX_TIMEOUT=4
+
+  # grafana:
+  #   container_name: grafana
+  #   image: grafana/grafana
+  #   networks:
+  #     - network-zabbix
+  #   links:
+  #     - mysql
+  #     - zabbix-server
+  #   restart: always
+  #   ports:
+  #     - '3000:3000'
+  #   environment: 
+  #     - GF_INSTALL_PLUGINS=alexanderzobnin-zabbix-app
+  #   depends_on:
+  #     - mysql
+  #     - zabbix-server
+
+
+  # phpmyadmin:
+  #   container_name: phpmyadmin
+  #   image: phpmyadmin
+  #   ports:
+  #     - 8000:80
+  #   environment:
+  #     - PMA_ARBITRARY=1
+  #     - UPLOAD_LIMIT=10000kb
+  #   networks:
+  #     - network-zabbix
+  #   links:
+  #     - mysql
+  #   depends_on:
+  #     - mysql
+  #   restart: always
