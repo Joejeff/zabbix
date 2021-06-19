@@ -41,32 +41,28 @@ Comente com `#` a variável `MYSQL_ALLOW_EMPTY_PASSWORD=yes` e descomente a  MYS
 - MYSQL_ROOT_PASSWORD=pass
 
 
-## Habilitando phpmyadmin
+## Verificando a escuta das portas no host docker
 
-Descomente todas as linhas.
+Portas usadas pelo zabbix
 
-Dica: No VSCODE selecione todas as linhas e pressione `CTRL`+`/`
+10050 (server)
+10051 (cliente) 
 
-http://localhost:8000
+`ss -lntp`
 
-Servidor: mysql
+State       Recv-Q       Send-Q              Local Address:Port                Peer Address:Port
+LISTEN      0            4096                      0.0.0.0:443                      0.0.0.0:*          
+LISTEN      0            4096                      0.0.0.0:8000                     0.0.0.0:*          
+LISTEN      0            4096                      0.0.0.0:10050                    0.0.0.0:*          
+LISTEN      0            4096                      0.0.0.0:10051                    0.0.0.0:*          
+LISTEN      0            4096                      0.0.0.0:5000                     0.0.0.0:*          
+LISTEN      0            4096                      0.0.0.0:3306                     0.0.0.0:*          
+LISTEN      0            4096                      0.0.0.0:8080                     0.0.0.0:*          
 
-Usuário: root
-
-Senha:         # "vazio em branco" ou que você definiu
-
-Com ele pe possível gerenciar o banco de dados por um interface web.
-A parte de banco de dados, criar a base, usuário, permissão e importar o schema podem ser feitos pelo phpmyadmin.
-
-
-## Habilitando Grafana
-
-Descomente todas as linhas.
-
-Dica: No VSCODE selecione todas as linhas e pressione `CTRL`+`/`
-
-http://localhost:3000
-
-Usuário: admin
-
-Senha: admin
+```
+ss --help
+-l, --listening
+-n, --numeric
+-t, --tcp
+-p, --processes
+```
